@@ -1,0 +1,19 @@
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProceduralMapGenerator", "ProceduralMapGenerator.csproj", "{0D92B384-89CD-4101-8CE2-75EDDF99460E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+	Debug|Any CPU = Debug|Any CPU
+	ExportDebug|Any CPU = ExportDebug|Any CPU
+	ExportRelease|Any CPU = ExportRelease|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0D92B384-89CD-4101-8CE2-75EDDF99460E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D92B384-89CD-4101-8CE2-75EDDF99460E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D92B384-89CD-4101-8CE2-75EDDF99460E}.ExportDebug|Any CPU.ActiveCfg = ExportDebug|Any CPU
+		{0D92B384-89CD-4101-8CE2-75EDDF99460E}.ExportDebug|Any CPU.Build.0 = ExportDebug|Any CPU
+		{0D92B384-89CD-4101-8CE2-75EDDF99460E}.ExportRelease|Any CPU.ActiveCfg = ExportRelease|Any CPU
+		{0D92B384-89CD-4101-8CE2-75EDDF99460E}.ExportRelease|Any CPU.Build.0 = ExportRelease|Any CPU
+	EndGlobalSection
+EndGlobal
