@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AccidentalNoise;
 using Godot;
 
 namespace ProceduralMapGenerator.Scripts
@@ -22,7 +23,8 @@ namespace ProceduralMapGenerator.Scripts
 
         // Noise generator module
         // Unity: ImplicitFractal HeightMap;
-        Noise HeightMap;
+        ImplicitFractal HeightMap;
+        //Noise HeightMap;
 
         // Height map data
         MapData HeightData;
@@ -40,6 +42,8 @@ namespace ProceduralMapGenerator.Scripts
         [Export]
         float ZOOM = 8f;
 
+        private readonly int _seed = 7543453;
+
         public override void _Ready()
         {
             // Get the mesh we are rendering our output to
@@ -55,6 +59,8 @@ namespace ProceduralMapGenerator.Scripts
 
             // Build our final objects based on our data
             LoadTiles();
+
+            UpdateNeighbors();
 
             // TODO Render a 3D texture representation of our map AND move to TextureGenerator
             //HeightMapRenderer.materials[0].mainTexture = TextureGenerator.GetTexture(Width, Height, Tiles);
@@ -91,11 +97,17 @@ namespace ProceduralMapGenerator.Scripts
                                            TerrainFrequency,
                                            UnityEngine.Random.Range(0, int.MaxValue));
             */
-            HeightMap = new Noise(7543453);
+            HeightMap = new ImplicitFractal(FractalType.MULTI,
+                                           BasisType.SIMPLEX,
+                                           InterpolationType.QUINTIC,
+                                           TerrainOctaves,
+                                           TerrainFrequency,
+                                           _seed);
+            //HeightMap = new Noise(_seed);
         }
 
         // Extract data from a noise module
-        private void GetData(Noise noise, ref MapData mapData)
+        private void GetData(ImplicitModuleBase module, ref MapData mapData)
         {
             mapData = new MapData(Width, Height);
 
@@ -104,21 +116,94 @@ namespace ProceduralMapGenerator.Scripts
             {
                 for (var y = 0; y < Height; y++)
                 {
+                    
+                    /* No Wrapping
                     //Sample the noise at smaller intervals
                     float x1 = x / (float)Width;
                     float y1 = y / (float)Height;
 
                     // Unity: float value = (float)HeightMap.Get(x1, y1);
-                    float value = (float)HeightMap.Perlin(x1 * ZOOM, y1 * ZOOM);
+                    //float value = (float)HeightMap.Perlin(x1 * ZOOM, y1 * ZOOM);
+                    float value = (float)module.Get(x1 * ZOOM, y1 * ZOOM);
 
                     //keep track of the max and min values found
                     if (value > mapData.Max) mapData.Max = value;
                     if (value < mapData.Min) mapData.Min = value;
 
                     mapData.Data[x, y] = value;
+                    */
+
+                    /*/ Wrapping the Map on One Axis 
+                    //Noise range
+                    float x1 = 0, x2 = 1;
+                    float y1 = 0, y2 = 1;
+                    float dx = x2 - x1;
+                    float dy = y2 - y1;
+
+                    //Sample noise at smaller intervals
+                    float s = x / (float)Width;
+                    float t = y / (float)Height;
+
+                    // Calculate our 3D coordinates
+                    float nx = (float)(x1 + Math.Cos(s * 2 * Math.PI) * dx / (2 * Math.PI));
+                    float ny = (float)(x1 + Math.Sin(s * 2 * Math.PI) * dx / (2 * Math.PI));
+                    float nz = t;
+
+                    float heightValue = (float)HeightMap.Get(nx, ny, nz);
+
+                    // keep track of the max and min values found
+                    if (heightValue > mapData.Max)
+                        mapData.Max = heightValue;
+                    if (heightValue < mapData.Min)
+                        mapData.Min = heightValue;
+
+                    mapData.Data[x, y] = heightValue;
+                    */
+
+                    // Wrapping the Map on Both Axis
+                    // Noise range
+                    float x1 = 0, x2 = 2;
+                    float y1 = 0, y2 = 2;
+                    float dx = x2 - x1;
+                    float dy = y2 - y1;
+
+                    // Sample noise at smaller intervals
+                    float s = x / (float)Width;
+                    float t = y / (float)Height;
+
+                    // Calculate our 4D coordinates
+                    float nx = (float)(x1 + Math.Cos(s * 2 * Math.PI) * dx / (2 * Math.PI));
+                    float ny = (float)(y1 + Math.Cos(t * 2 * Math.PI) * dy / (2 * Math.PI));
+                    float nz = (float)(x1 + Math.Sin(s * 2 * Math.PI) * dx / (2 * Math.PI));
+                    float nw = (float)(y1 + Math.Sin(t * 2 * Math.PI) * dy / (2 * Math.PI));
+
+                    float heightValue = (float)HeightMap.Get(nx * ZOOM, ny * ZOOM, nz * ZOOM, nw * ZOOM);
+
+                    // keep track of the max and min values found
+                    if (heightValue > mapData.Max) mapData.Max = heightValue;
+                    if (heightValue < mapData.Min) mapData.Min = heightValue;
+
+                    mapData.Data[x, y] = heightValue;
                 }
             }
         }
+
+        private void UpdateNeighbors()
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                for (var y = 0; y < Height; y++)
+                {
+                    Tile t = Tiles[x, y];
+
+                    t.Top = Tiles[t.X, MathHelper.Mod(t.Y - 1, Height)];
+                    t.Bottom = Tiles[t.X, MathHelper.Mod(t.Y + 1, Height)];
+                    t.Left = Tiles[MathHelper.Mod(t.X - 1, Width), t.Y];
+                    t.Right = Tiles[MathHelper.Mod(t.X + 1, Width), t.Y];
+                }
+            }
+        }
+
 
         // Build a Tile array from our data
         private void LoadTiles()

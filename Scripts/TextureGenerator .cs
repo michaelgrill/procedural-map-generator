@@ -9,14 +9,22 @@ namespace ProceduralMapGenerator.Scripts
 {
     public static class TextureGenerator
     {
-        public static Texture GetTexture(int width, int height, Tile[,] tiles)
+        private static int _count = 0;
+
+
+
+
+        public static Texture GetTexture(int width, int height, Tile[,] tiles, int resolutionMultiplicator = 1)
         {
             var texture = new ImageTexture();// = new Texture2D(width, height);
-            texture.Create(width, height, Image.Format.Rgb8);
+            texture.Create(width * resolutionMultiplicator
+                , height * resolutionMultiplicator, Image.Format.Rgb8);
             var pixels = new Color[width * height];
 
             var image = new Image();
-            image.Create(width, height, false, Image.Format.Rgb8);
+            image.Create(width * resolutionMultiplicator
+                , height * resolutionMultiplicator
+                , false, Image.Format.Rgb8);
             image.Lock();
             //texture.SetData(image);
 
@@ -24,24 +32,143 @@ namespace ProceduralMapGenerator.Scripts
             {
                 for (var y = 0; y < height; y++)
                 {
-                    float value = tiles[x, y].HeightValue;
-
+                    Tile tile = tiles[x, y];
+                    var thisLayer = tile.Layer;
+                    var thisColor = thisLayer.Color;
                     //Set color range, 0 = black, 1 = white
                     //var color = Color.Lerp(Color.black, Color.white, value);
-                    var color = new Color(0,0,0);
-                    color = color.LinearInterpolate(new Color(1, 1, 1), value);
+                    //var color = PredefindColors.white.LinearInterpolate(PredefindColors.black, tile.HeightValue);
+                    var color = thisColor;
+                    var layer = thisLayer;
+
+                    //darken the color if a edge tile
+                    if (tiles[x, y].Bitmask != 15)
+                    {
+                        color = color.LinearInterpolate(PredefindColors.black, 0.4f);
+                    }
+
+                    if (resolutionMultiplicator > 1)
+                    {
+                        FillTop(tile, resolutionMultiplicator, x, y, image);
+                        FillBottom(tile, resolutionMultiplicator, x, y, image);
+                        FillLeft(tile, resolutionMultiplicator, x, y, image);
+                        FillRight(tile, resolutionMultiplicator, x, y, image);
+                    }
+
+                    if (resolutionMultiplicator % 2 != 0)
+                    {
+                        color = tile.Layer.Color;
+                        if (tiles[x, y].Bitmask != 15)
+                        {
+                            color = color.LinearInterpolate(PredefindColors.black, 0.4f);
+                        }
+                        int centerX = x * resolutionMultiplicator + resolutionMultiplicator / 2;
+                        int centerY = y * resolutionMultiplicator + resolutionMultiplicator / 2;
+                        image.SetPixel(centerX, centerY, color);
+                    }
+
                     pixels[x + y * width] = color;
                     //texture.GetData().SetPixel(x, y, color);
-                    image.SetPixel(x, y, color);
+                    //image.SetPixel(x, y, color);
                 }
             }
             //texture.SetPixels(pixels);
             //texture.wrapMode = TextureWrapMode.Clamp;
-            image.SavePng("res://test_output.png");
+            image.SavePng($"res://output_{_count++}.png");
             image.Unlock();
             texture.SetData(image);
             return texture;
         }
 
+        private static void FillTop(Tile tile, int resolutionMultiplicator, int x, int y, Image image)
+        {
+            // top
+            var layer = tile.Top.Layer;
+            var color = layer.Color;
+            if (layer.MaxHeight < tile.Layer.MaxHeight)
+            {
+                color = layer.Color;
+            }
+            if ((tile.Bitmask & 1) != 1)
+            {
+                color = color.LinearInterpolate(PredefindColors.black, 0.4f);
+            }
+            for (int down = 0; down < resolutionMultiplicator / 2; down++)
+            {
+                for (int side = 0 + down; side < resolutionMultiplicator - 1 - down; side++)
+                {
+                    var startX = resolutionMultiplicator * x + side;
+                    var startY = resolutionMultiplicator * y + down;
+                    image.SetPixel(startX, startY, color);
+                }
+            }
+        }
+        private static void FillBottom(Tile tile, int resolutionMultiplicator, int x, int y, Image image)
+        {
+            var layer = tile.Bottom.Layer;
+            var color = layer.Color;
+            if (layer.MaxHeight < tile.Layer.MaxHeight)
+            {
+                color = layer.Color;
+            }
+            if ((tile.Bitmask & 4) != 4)
+            {
+                color = color.LinearInterpolate(PredefindColors.black, 0.4f);
+            }
+            for (int down = 0; down < resolutionMultiplicator / 2 + 1; down++)
+            {
+                for (int side = 1 + down; side < resolutionMultiplicator - down; side++)
+                {
+                    var startX = resolutionMultiplicator * x + side;
+                    var startY = resolutionMultiplicator * y - down + resolutionMultiplicator - 1;
+                    image.SetPixel(startX, startY, color);
+                }
+            }
+        }
+        private static void FillLeft(Tile tile, int resolutionMultiplicator, int x, int y, Image image)
+        {
+            var layer = tile.Left.Layer;
+            var color = layer.Color;
+            if (layer.MaxHeight < tile.Layer.MaxHeight)
+            {
+                color = layer.Color;
+            }
+            if ((tile.Bitmask & 8) != 8)
+            {
+                color = color.LinearInterpolate(PredefindColors.black, 0.4f);
+            }
+            for (int side = 0; side < resolutionMultiplicator / 2; side++)
+            {
+                for (int down = 1 + side; down < resolutionMultiplicator - side; down++)
+                {
+                    var startX = resolutionMultiplicator * x + side;
+                    var startY = resolutionMultiplicator * y + down;
+                    image.SetPixel(startX, startY, color);
+                }
+            }
+
+        }
+        private static void FillRight(Tile tile, int resolutionMultiplicator, int x, int y, Image image)
+        {
+            var layer = tile.Right.Layer;
+            var color = layer.Color;
+            if (layer.MaxHeight < tile.Layer.MaxHeight)
+            {
+                color = layer.Color;
+            }
+            if ((tile.Bitmask & 2) != 2)
+            {
+                color = color.LinearInterpolate(PredefindColors.black, 0.4f);
+            }
+            for (int side = 0; side < resolutionMultiplicator / 2; side++)
+            {
+                for (int down = 0 + side; down < resolutionMultiplicator - side - 1; down++)
+                {
+                    var startX = resolutionMultiplicator * x - side + resolutionMultiplicator - 1;
+                    var startY = resolutionMultiplicator * y + down;
+                    image.SetPixel(startX, startY, color);
+                }
+            }
+        }
     }
 }
