@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Godot;
+using static Godot.Texture;
 
 namespace ProceduralMapGenerator.Scripts
 {
@@ -19,12 +20,19 @@ namespace ProceduralMapGenerator.Scripts
             var texture = new ImageTexture();// = new Texture2D(width, height);
             texture.Create(width * resolutionMultiplicator
                 , height * resolutionMultiplicator, Image.Format.Rgb8);
+
+            // for no interpolation
+            texture.Flags = (uint)FlagsEnum.Mipmaps;
+
             var pixels = new Color[width * height];
 
             var image = new Image();
             image.Create(width * resolutionMultiplicator
                 , height * resolutionMultiplicator
                 , false, Image.Format.Rgb8);
+
+            
+
             image.Lock();
             //texture.SetData(image);
 
@@ -76,10 +84,60 @@ namespace ProceduralMapGenerator.Scripts
             //texture.wrapMode = TextureWrapMode.Clamp;
             image.SavePng($"res://output_{_count++}.png");
             image.Unlock();
+
+            //image.GenerateMipmaps(false);
+            
+
             texture.SetData(image);
             return texture;
         }
 
+        
+        public static Texture GetHeatMapTexture(int width, int height, Tile[,] tiles)
+        {
+            int resolutionMultiplicator = 1;
+            var texture = new ImageTexture();
+            texture.Create(width * resolutionMultiplicator
+                , height * resolutionMultiplicator, Image.Format.Rgb8);
+
+            // for no interpolation
+            texture.Flags = (uint)FlagsEnum.Mipmaps;
+
+
+            var image = new Image();
+            image.Create(width * resolutionMultiplicator
+                , height * resolutionMultiplicator
+                , false, Image.Format.Rgb8);
+
+            image.Lock();
+            for (var x = 0; x < width; x++)
+            {
+                for (var y = 0; y < height; y++)
+                {
+                    var tile = tiles[x, y];
+                    // red <-> blue
+                    var color = PredefindColors.blue.LinearInterpolate(PredefindColors.red, tile.HeatValue);
+                   
+                    // red <-> yellow <-> green <-> blue
+                    color = HeatType.GetHeatType(tile.HeatValue).Color;
+
+                    //darken the color if a edge tile
+                    if (tiles[x, y].Bitmask != 15)
+                    {
+                        color = color.LinearInterpolate(PredefindColors.black, 0.4f);
+                    }
+
+                    image.SetPixel(x, y, color);
+                }
+            }
+
+            image.SavePng($"res://output_heatmap_{_count++}.png");
+            image.Unlock();
+
+            texture.SetData(image);
+            return texture;
+        }
+        
         private static void FillTop(Tile tile, int resolutionMultiplicator, int x, int y, Image image)
         {
             // top

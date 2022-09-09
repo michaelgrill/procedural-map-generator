@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/output_1.png-0a87c822dd4905d10ff4ee8af7b9d29d.stex"
+path="res://.import/output_heatmap_0.png-3c0cd6c0af4984f0009bb1439d372066.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://output_1.png"
-dest_files=[ "res://.import/output_1.png-0a87c822dd4905d10ff4ee8af7b9d29d.stex" ]
+source_file="res://output_heatmap_0.png"
+dest_files=[ "res://.import/output_heatmap_0.png-3c0cd6c0af4984f0009bb1439d372066.stex" ]
 
 [params]
 

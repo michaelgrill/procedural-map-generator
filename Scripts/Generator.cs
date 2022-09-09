@@ -9,40 +9,30 @@ using Godot;
 namespace ProceduralMapGenerator.Scripts
 {
     [Tool]
-    public class Generator : Node
+    public abstract class Generator : Node
     {
         // Adjustable variables for Unity Inspector
         [Export]
-        int Width = 256;
+        public int Width = 512;
         [Export]
-        int Height = 256;
+        public int Height = 512;
         [Export]
-        int TerrainOctaves = 6;
+        public int TerrainOctaves = 6;
         [Export]
-        double TerrainFrequency = 1.25;
-
-        // Noise generator module
-        // Unity: ImplicitFractal HeightMap;
-        ImplicitFractal HeightMap;
-        //Noise HeightMap;
+        public double TerrainFrequency = 1.25;
 
         // Height map data
-        MapData HeightData;
+        protected MapData HeightData;
+        protected MapData HeatData;
 
         // Final Objects
-        Tile[,] Tiles;
-
-        // Our texture output (unity component)
-        // MeshRenderer HeightMapRenderer;
-
-        // Our texture output (godot component)
-        MeshInstance HeightMapRenderer;
+        protected Tile[,] Tiles;
 
         // TEST
         [Export]
-        float ZOOM = 8f;
+        public float ZOOM = 1f;
 
-        private readonly int _seed = 7543453;
+        protected readonly int _seed = 1;
 
         public override void _Ready()
         {
@@ -55,7 +45,7 @@ namespace ProceduralMapGenerator.Scripts
             Initialize();
 
             // Build the height map
-            GetData(HeightMap, ref HeightData);
+            GetData();
 
             // Build our final objects based on our data
             LoadTiles();
@@ -80,113 +70,13 @@ namespace ProceduralMapGenerator.Scripts
             }
             var tmpMesh = st.Commit();
             HeightMapRenderer.Mesh = tmpMesh;*/
-            // Generate and Display 2D Texture
-            var sprite = GetNode<Sprite>("./Sprite");
-            var texture = TextureGenerator.GetTexture(Width, Height, Tiles);
-            sprite.Texture = texture;
+            AfterReady();
         }
 
-        private void Initialize()
-        {
-            // Initialize the HeightMap Generator
-            /* Unity: 
-            HeightMap = new ImplicitFractal(FractalType.MULTI,
-                                           BasisType.SIMPLEX,
-                                           InterpolationType.QUINTIC,
-                                           TerrainOctaves,
-                                           TerrainFrequency,
-                                           UnityEngine.Random.Range(0, int.MaxValue));
-            */
-            HeightMap = new ImplicitFractal(FractalType.MULTI,
-                                           BasisType.SIMPLEX,
-                                           InterpolationType.QUINTIC,
-                                           TerrainOctaves,
-                                           TerrainFrequency,
-                                           _seed);
-            //HeightMap = new Noise(_seed);
-        }
+        protected virtual void AfterReady() { }
 
-        // Extract data from a noise module
-        private void GetData(ImplicitModuleBase module, ref MapData mapData)
-        {
-            mapData = new MapData(Width, Height);
-
-            // loop through each x,y point - get height value
-            for (var x = 0; x < Width; x++)
-            {
-                for (var y = 0; y < Height; y++)
-                {
-                    
-                    /* No Wrapping
-                    //Sample the noise at smaller intervals
-                    float x1 = x / (float)Width;
-                    float y1 = y / (float)Height;
-
-                    // Unity: float value = (float)HeightMap.Get(x1, y1);
-                    //float value = (float)HeightMap.Perlin(x1 * ZOOM, y1 * ZOOM);
-                    float value = (float)module.Get(x1 * ZOOM, y1 * ZOOM);
-
-                    //keep track of the max and min values found
-                    if (value > mapData.Max) mapData.Max = value;
-                    if (value < mapData.Min) mapData.Min = value;
-
-                    mapData.Data[x, y] = value;
-                    */
-
-                    /*/ Wrapping the Map on One Axis 
-                    //Noise range
-                    float x1 = 0, x2 = 1;
-                    float y1 = 0, y2 = 1;
-                    float dx = x2 - x1;
-                    float dy = y2 - y1;
-
-                    //Sample noise at smaller intervals
-                    float s = x / (float)Width;
-                    float t = y / (float)Height;
-
-                    // Calculate our 3D coordinates
-                    float nx = (float)(x1 + Math.Cos(s * 2 * Math.PI) * dx / (2 * Math.PI));
-                    float ny = (float)(x1 + Math.Sin(s * 2 * Math.PI) * dx / (2 * Math.PI));
-                    float nz = t;
-
-                    float heightValue = (float)HeightMap.Get(nx, ny, nz);
-
-                    // keep track of the max and min values found
-                    if (heightValue > mapData.Max)
-                        mapData.Max = heightValue;
-                    if (heightValue < mapData.Min)
-                        mapData.Min = heightValue;
-
-                    mapData.Data[x, y] = heightValue;
-                    */
-
-                    // Wrapping the Map on Both Axis
-                    // Noise range
-                    float x1 = 0, x2 = 2;
-                    float y1 = 0, y2 = 2;
-                    float dx = x2 - x1;
-                    float dy = y2 - y1;
-
-                    // Sample noise at smaller intervals
-                    float s = x / (float)Width;
-                    float t = y / (float)Height;
-
-                    // Calculate our 4D coordinates
-                    float nx = (float)(x1 + Math.Cos(s * 2 * Math.PI) * dx / (2 * Math.PI));
-                    float ny = (float)(y1 + Math.Cos(t * 2 * Math.PI) * dy / (2 * Math.PI));
-                    float nz = (float)(x1 + Math.Sin(s * 2 * Math.PI) * dx / (2 * Math.PI));
-                    float nw = (float)(y1 + Math.Sin(t * 2 * Math.PI) * dy / (2 * Math.PI));
-
-                    float heightValue = (float)HeightMap.Get(nx * ZOOM, ny * ZOOM, nz * ZOOM, nw * ZOOM);
-
-                    // keep track of the max and min values found
-                    if (heightValue > mapData.Max) mapData.Max = heightValue;
-                    if (heightValue < mapData.Min) mapData.Min = heightValue;
-
-                    mapData.Data[x, y] = heightValue;
-                }
-            }
-        }
+        protected abstract void Initialize();
+        protected abstract void GetData();
 
         private void UpdateNeighbors()
         {
@@ -218,16 +108,28 @@ namespace ProceduralMapGenerator.Scripts
                     t.X = x;
                     t.Y = y;
 
-                    float value = HeightData.Data[x, y];
+                    float heightValue = HeightData.Get(x, y);
+                    heightValue = (heightValue - HeightData.Min) / (HeightData.Max - HeightData.Min);
+                    t.HeightValue = heightValue;
 
-                    //normalize our value between 0 and 1
-                    value = (value - HeightData.Min) / (HeightData.Max - HeightData.Min);
 
-                    t.HeightValue = value;
+                    // Set heat value
+                    float heatValue = HeatData.Get(x, y);
+                    heatValue = (heatValue - HeatData.Min) / (HeatData.Max - HeatData.Min);
+                    t.BaseHeatValue = heatValue;
 
+                    /* set heat type
+                    if (heatValue < ColdestValue) t.HeatType = HeatType.Coldest;
+                    else if (heatValue < ColderValue) t.HeatType = HeatType.Colder;
+                    else if (heatValue < ColdValue) t.HeatType = HeatType.Cold;
+                    else if (heatValue < WarmValue) t.HeatType = HeatType.Warm;
+                    else if (heatValue < WarmerValue) t.HeatType = HeatType.Warmer;
+                    else t.HeatType = HeatType.Warmest;
+                    */
                     Tiles[x, y] = t;
                 }
             }
         }
+
     }
 }
